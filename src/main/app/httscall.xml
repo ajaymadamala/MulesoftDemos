@@ -34,7 +34,7 @@ http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/
                 <db:dynamic-query><![CDATA[select * from american where toAirport = '#[flowVars.id]']]></db:dynamic-query>
             </db:select>
             <json:object-to-json-transformer doc:name="Object to JSON"/>
-            <logger level="INFO" doc:name="Logger"/>
+           <!-- <logger level="INFO" doc:name="Logger"/>-->
         </ee:cache>
     </flow>
     <flow name="httscallFlow1">
