@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+    <db:mysql-config name="MySQL_Configuration" host="iltdb.mulesoft-training.com" port="3306" user="mule" password="mule" database="training" doc:name="MySQL Configuration"/>
+    <http:listener-config name="HTTP_Listener_Configuration" protocol="HTTPS" host="0.0.0.0" port="8083" doc:name="HTTP Listener Configuration">
+        <tls:context>
+            <tls:key-store type="jks" path="serverStore.jks" alias="selfsigned" keyPassword="password" password="password"/>
+        </tls:context>
+    </http:listener-config>
+    <ee:object-store-caching-strategy name="Caching_Strategy" keyGenerationExpression="#[flowVars.id]" doc:name="Caching Strategy">
+        <in-memory-store maxEntries="30000" entryTTL="2000" expirationInterval="20000"/>
+    </ee:object-store-caching-strategy>
+    <http:request-config name="HTTP_Request_Configuration" protocol="HTTPS" host="localhost" port="8083" doc:name="HTTP Request Configuration">
+        <tls:context>
+            <tls:trust-store path="serverStore.jks" password="password" type="jks"/>
+            <tls:key-store type="jks" path="serverStore.jks" alias="selfsigned" keyPassword="password" password="password"/>
+        </tls:context>
+    </http:request-config>
+    <http:listener-config name="HTTP_Listener_Configuration1" host="localhost" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="httscallFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/httpscall" doc:name="HTTPS"/>
+        <set-variable variableName="id" value="#[message.inboundProperties.'http.query.params'.des]" doc:name="Variable"/>
+        <ee:cache doc:name="Cache" cachingStrategy-ref="Caching_Strategy">
+            <db:select config-ref="MySQL_Configuration" doc:name="Database">
+                <db:dynamic-query><![CDATA[select * from american where toAirport = '#[flowVars.id]']]></db:dynamic-query>
+            </db:select>
+            <json:object-to-json-transformer doc:name="Object to JSON"/>
+            <logger level="INFO" doc:name="Logger"/>
+        </ee:cache>
+    </flow>
+    <flow name="httscallFlow1">
+        <http:listener config-ref="HTTP_Listener_Configuration1" path="/test" doc:name="HTTP"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/httpscall" method="GET" doc:name="HTTPS">
+            <http:request-builder>
+                <http:query-param paramName="des" value="#[message.inboundProperties.'http.query.params'.des]"/>
+            </http:request-builder>
+        </http:request>
+    </flow>
+</mule>
